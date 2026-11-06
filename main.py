@@ -1,7 +1,8 @@
 import pygame
 from settings import *
 from game.track import draw_track
-from game.car import Car
+from game.race import Race
+from game.hud import HUD
 
 
 def main():
@@ -11,19 +12,25 @@ def main():
     pygame.display.set_caption(TITLE)
     clock = pygame.time.Clock()
 
-    player = Car()
+    race = Race()
+    hud = HUD()
 
     running = True
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    running = False
+                elif event.key == pygame.K_r:
+                    race = Race()  # restart
 
-        player.handle_input(pygame.key.get_pressed())
-        player.update()
+        race.update(pygame.key.get_pressed())
 
         draw_track(screen)
-        player.draw(screen)
+        race.draw(screen)
+        hud.draw(screen, race)
 
         pygame.display.update()
         clock.tick(FPS)

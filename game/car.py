@@ -1,7 +1,6 @@
 import math
 
 import pygame
-
 from settings import *
 
 
@@ -43,6 +42,7 @@ class Car:
 
         self.throttle = 0.0
         self.steer = 0.0
+        self.fuel = FUEL_MAX
 
         self.color = color
         self._base_image = self._make_image(color)
@@ -73,24 +73,37 @@ class Car:
         if keys[pygame.K_RIGHT]:
             self.steer += 1.0
 
+    # ------------------------------------------------------------------ state
+    def get_state(self):
+        """Snapshot of the position, used to undo a move that hit a wall."""
+        return (self.x, self.y, self.angle)
+
+    def set_state(self, state):
+        self.x, self.y, self.angle = state
+
     # ---------------------------------------------------------------- physics
     def update(self):
         """Advance the car by one frame."""
         self._update_speed()
         self._update_angle()
+        self._use_fuel()
 
         rad = math.radians(self.angle)
         self.x += math.cos(rad) * self.speed
         self.y += math.sin(rad) * self.speed
 
     def _update_speed(self):
-        if self.throttle > 0:
-            self.speed += self.acceleration * self.throttle
-        elif self.throttle < 0:
+        throttle = self.throttle
+        if self.fuel <= 0 and throttle > 0:
+            throttle = 0.0  # out of fuel: no more acceleration
+
+        if throttle > 0:
+            self.speed += self.acceleration * throttle
+        elif throttle < 0:
             if self.speed > 0:
                 self.speed -= self.brake_power      # braking
             else:
-                self.speed += self.acceleration * self.throttle  # reversing
+                self.speed += self.acceleration * throttle  # reversing
         else:
             self._apply_friction()
 
@@ -106,9 +119,12 @@ class Car:
         # A car can't turn on the spot: turning scales with how fast it moves
         # and flips when reversing, like a real steering wheel.
         speed_factor = min(1.0, abs(self.speed) / 2.0)
-        direction = 1 if self.speed > 0 else -1
+        direction = 1 if self.speed >= 0 else -1
         self.angle += self.steer * self.turn_speed * speed_factor * direction
         self.angle %= 360
+
+    def _use_fuel(self):
+        self.fuel = max(0.0, self.fuel - FUEL_USE_PER_FRAME * max(self.throttle, 0.0))
 
     # ---------------------------------------------------------------- drawing
     def draw(self, screen):
@@ -116,3 +132,41 @@ class Car:
         rotated = pygame.transform.rotate(self._base_image, -self.angle)
         rect = rotated.get_rect(center=(self.x, self.y))
         screen.blit(rotated, rect)
+
+
+class AIController:
+    """Drives a Car along a list of waypoints.
+
+    It only decides throttle and steer; the Car does the moving. In Phase 3
+    the waypoint list will come from BFS / A* instead of being fixed.
+    """
+
+    def __init__(self, waypoints):
+        self.waypoints = waypoints
+        self.target = 0  # index of the waypoint we are driving toward
+
+    def update(self, car):
+        tx, ty = self.waypoints[self.target]
+        dx, dy = tx - car.x, ty - car.y
+
+        # Close enough: aim for the next waypoint
+        if math.hypot(dx, dy) < WAYPOINT_REACH_DISTANCE:
+            self.target = (self.target + 1) % len(self.waypoints)
+            tx, ty = self.waypoints[self.target]
+            dx, dy = tx - car.x, ty - car.y
+
+        # Smallest signed angle from where we face to where we want to go
+        desired = math.degrees(math.atan2(dy, dx))
+        diff = (desired - car.angle + 180) % 360 - 180
+
+        car.steer = max(-1.0, min(1.0, diff / 15.0))
+
+        # Slow down in sharp turns
+        turn = min(abs(diff), 60)
+        target_speed = car.max_speed * (1 - 0.5 * turn / 60)
+        if car.speed < target_speed:
+            car.throttle = 1.0
+        elif car.speed > target_speed + 0.5:
+            car.throttle = -1.0
+        else:
+            car.throttle = 0.0
