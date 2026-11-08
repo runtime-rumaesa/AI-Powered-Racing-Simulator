@@ -1,6 +1,6 @@
 import pygame
 from settings import *
-from game.track import draw_track
+from game.track import draw_track, get_track
 from game.race import Race
 from game.hud import HUD
 
@@ -13,7 +13,8 @@ def main():
     clock = pygame.time.Clock()
 
     race = Race()
-    hud = HUD()
+    hud = HUD(get_track())
+    world = pygame.Surface((WIDTH, HEIGHT))  # everything that can shake
 
     running = True
     while running:
@@ -28,8 +29,11 @@ def main():
 
         race.update(pygame.key.get_pressed())
 
-        draw_track(screen)
-        race.draw(screen)
+        draw_track(world)
+        race.draw(world)
+
+        screen.fill(GRASS_COLOR)
+        screen.blit(world, race.effects.shake_offset())
         hud.draw(screen, race)
 
         pygame.display.update()

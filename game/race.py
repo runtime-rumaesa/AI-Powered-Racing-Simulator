@@ -3,7 +3,8 @@ import math
 from settings import *
 from game import collision
 from game.car import Car, AIController
-from game.track import get_waypoints
+from game.effects import Effects
+from game.track import get_track, get_waypoints
 
 
 class Racer:
@@ -16,7 +17,7 @@ class Racer:
 
         self.laps = 0
         self.next_cp = 1          # next checkpoint to hit (0 is the start line)
-        self.prev_x = car.x
+        self.prev_pos = (car.x, car.y)
         self.finished = False
         self.finish_time = None
         self.lap_start = 0.0
@@ -36,6 +37,8 @@ class Race:
     """
 
     def __init__(self, num_ai=NUM_AI_CARS, total_laps=NUM_LAPS):
+        self.track = get_track()
+        self.effects = Effects()
         self.total_laps = total_laps
         self.checkpoints = get_waypoints()[::CHECKPOINT_STEP]
         self.num_cp = len(self.checkpoints)
@@ -48,33 +51,28 @@ class Race:
         self.racers = []
         num_ai = max(0, min(num_ai, 5))
         for slot in range(num_ai + 1):
-            x, y = self._grid_slot(slot)
+            x, y, angle = self.track.grid_slot(slot)
             if slot == 0:
-                self.racers.append(Racer("You", Car(x=x, y=y)))
+                self.racers.append(Racer("You", Car(x=x, y=y, angle=angle)))
             else:
                 i = slot - 1
                 car = Car(
                     x=x,
                     y=y,
+                    angle=angle,
                     color=AI_COLORS[i % len(AI_COLORS)],
                     max_speed=CAR_MAX_SPEED * AI_SPEED_FACTORS[i % len(AI_SPEED_FACTORS)],
                 )
-                # Each AI drives a lane that matches its grid slot
-                lane = get_waypoints(offset=CAR_START_Y - y)
-                self.racers.append(Racer(f"AI {slot}", car, AIController(lane)))
+                # Each AI drives the lane that matches its grid slot
+                lane = LANE_OFFSET if slot % 2 else -LANE_OFFSET
+                self.racers.append(Racer(f"AI {slot}", car, AIController(get_waypoints(offset=lane))))
 
         self.player = self.racers[0]
 
-    @staticmethod
-    def _grid_slot(slot):
-        """Two cars per row, rows going back from the start line."""
-        row = slot // 2
-        x = FINISH_LINE_X - 20 - 35 * row
-        y = CAR_START_Y - 20 if slot % 2 == 0 else CAR_START_Y + 20
-        return x, y
-
     # ----------------------------------------------------------------- update
     def update(self, keys):
+        self.effects.update()
+
         if self.state == "countdown":
             self.countdown -= 1 / FPS
             if self.countdown <= 0:
@@ -96,13 +94,24 @@ class Race:
             else:
                 racer.controller.update(car)
 
-            racer.prev_x = car.x
+            racer.prev_pos = (car.x, car.y)
             last_good = car.get_state()
             car.update()
-            collision.resolve_wall_collision(car, last_good)
+
+            impact = abs(car.speed)
+            if collision.resolve_wall_collision(car, last_good) and impact > 1.0:
+                self.effects.add_sparks(car.x, car.y, impact / CAR_MAX_SPEED)
+                if racer.is_player:
+                    self.effects.shake_camera(2 + impact * 1.2)
+
+            self._tyre_effects(car)
 
         # Cars that already finished are ignored so they don't block the others
-        collision.resolve_car_collisions([r.car for r in self.racers if not r.finished])
+        active = [r.car for r in self.racers if not r.finished]
+        for x, y, a, b in collision.resolve_car_collisions(active):
+            self.effects.add_sparks(x, y, 0.6)
+            if self.player.car in (a, b):
+                self.effects.shake_camera(4)
 
         for racer in self.racers:
             if not racer.finished:
@@ -110,6 +119,14 @@ class Race:
 
         if self.player.finished:
             self.state = "finished"
+
+    def _tyre_effects(self, car):
+        if not car.skidding:
+            return
+        for wx, wy in car.rear_wheels():
+            self.effects.add_skid(wx, wy)
+            if int(self.race_time * FPS) % 3 == 0:
+                self.effects.add_smoke(wx, wy)
 
     def _update_progress(self, racer):
         """Checkpoints must be hit in order, then the finish line is crossed."""
@@ -120,9 +137,8 @@ class Race:
             if math.hypot(car.x - cx, car.y - cy) < CHECKPOINT_RADIUS:
                 racer.next_cp += 1
 
-        # All checkpoints done: crossing the line left-to-right on the top
-        # straight completes the lap
-        elif racer.prev_x < FINISH_LINE_X <= car.x and car.y < TRACK_CENTER[1]:
+        # All checkpoints done: crossing the finish line completes the lap
+        elif self.track.crossed_finish(racer.prev_pos, (car.x, car.y)):
             racer.laps += 1
             racer.next_cp = 1
 
@@ -158,5 +174,7 @@ class Race:
 
     # ---------------------------------------------------------------- drawing
     def draw(self, screen):
+        self.effects.draw_under(screen)
         for racer in reversed(self.racers):  # player is drawn last, on top
             racer.car.draw(screen)
+        self.effects.draw_over(screen)
