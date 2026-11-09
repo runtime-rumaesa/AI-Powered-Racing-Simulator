@@ -72,6 +72,18 @@ class HUD:
             pygame.draw.circle(screen, WHITE, (x0 + mx, y0 + my), radius + 1)
             pygame.draw.circle(screen, racer.car.color, (x0 + mx, y0 + my), radius)
 
+    def _draw_legend(self, screen, race):
+        rows = len(race.racers)
+        height = 14 + 21 * rows
+        x = WIDTH - self.MAP_SIZE[0] - 16
+        y = HEIGHT - self.MAP_SIZE[1] - 16 - 8 - height
+        self._panel(screen, (x, y, self.MAP_SIZE[0], height))
+        for i, racer in enumerate(race.racers):
+            row_y = y + 17 + 21 * i
+            pygame.draw.circle(screen, WHITE, (x + 18, row_y), 7)
+            pygame.draw.circle(screen, racer.car.color, (x + 18, row_y), 6)
+            self._text(screen, self.f_small, racer.name, (x + 34, row_y), WHITE, "midleft", False)
+
     # ------------------------------------------------------------------- main
     def draw(self, screen, race):
         player = race.player
@@ -96,8 +108,9 @@ class HUD:
         self._draw_speed(screen, car, cx)
         self._draw_fuel(screen, car, cx)
 
+        self._draw_legend(screen, race)
         self._draw_minimap(screen, race)
-        self._text(screen, self.f_small, "ARROWS drive    R restart    ESC quit", (20, HEIGHT - 22), (230, 230, 230), "midleft")
+        self._text(screen, self.f_small, "ARROWS drive    T respawn    P AI routes    R restart    ESC quit", (20, HEIGHT - 22), (230, 230, 230), "midleft")
 
         if race.state == "countdown":
             self._text(screen, self.f_huge, str(int(race.countdown) + 1), (cx, HEIGHT // 2), YELLOW)

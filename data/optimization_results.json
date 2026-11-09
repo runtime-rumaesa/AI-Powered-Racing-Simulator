@@ -1,0 +1,401 @@
+[
+  {
+    "algorithm": "Baseline",
+    "seed": null,
+    "lap_time": 7.95,
+    "wall_hits": 0,
+    "fitness": 7.95,
+    "evaluations": 1,
+    "laps_to_1pct": null,
+    "seconds": 0,
+    "strategy": {
+      "top_speed": 1.0,
+      "acceleration": 1.0,
+      "braking": 1.0,
+      "brake_margin": 0.5,
+      "corner_speed": 0.45,
+      "steering": 0.06666666666666667,
+      "lookahead": 55
+    }
+  },
+  {
+    "algorithm": "Hill Climbing",
+    "seed": 1,
+    "lap_time": 6.383333333333334,
+    "wall_hits": 0,
+    "fitness": 6.383,
+    "evaluations": 600,
+    "laps_to_1pct": 132,
+    "seconds": 2.45,
+    "strategy": {
+      "top_speed": 1.0,
+      "acceleration": 1.0,
+      "braking": 0.5162,
+      "brake_margin": 1.4536,
+      "corner_speed": 1.0,
+      "steering": 0.235,
+      "lookahead": 61.046
+    }
+  },
+  {
+    "algorithm": "Hill Climbing",
+    "seed": 2,
+    "lap_time": 6.383333333333334,
+    "wall_hits": 0,
+    "fitness": 6.383,
+    "evaluations": 600,
+    "laps_to_1pct": 28,
+    "seconds": 3.02,
+    "strategy": {
+      "top_speed": 1.0,
+      "acceleration": 1.0,
+      "braking": 0.8218,
+      "brake_margin": 0.4307,
+      "corner_speed": 0.9988,
+      "steering": 0.2334,
+      "lookahead": 60.3705
+    }
+  },
+  {
+    "algorithm": "Hill Climbing",
+    "seed": 3,
+    "lap_time": 6.383333333333334,
+    "wall_hits": 0,
+    "fitness": 6.383,
+    "evaluations": 600,
+    "laps_to_1pct": 50,
+    "seconds": 3.61,
+    "strategy": {
+      "top_speed": 1.0,
+      "acceleration": 1.0,
+      "braking": 0.9478,
+      "brake_margin": 0.9658,
+      "corner_speed": 0.9919,
+      "steering": 0.1327,
+      "lookahead": 64.0692
+    }
+  },
+  {
+    "algorithm": "Hill Climbing",
+    "seed": 4,
+    "lap_time": 6.383333333333334,
+    "wall_hits": 0,
+    "fitness": 6.383,
+    "evaluations": 600,
+    "laps_to_1pct": 46,
+    "seconds": 3.13,
+    "strategy": {
+      "top_speed": 1.0,
+      "acceleration": 1.0,
+      "braking": 0.6936,
+      "brake_margin": 0.3776,
+      "corner_speed": 1.0,
+      "steering": 0.1305,
+      "lookahead": 63.8085
+    }
+  },
+  {
+    "algorithm": "Hill Climbing",
+    "seed": 5,
+    "lap_time": 6.383333333333334,
+    "wall_hits": 0,
+    "fitness": 6.383,
+    "evaluations": 600,
+    "laps_to_1pct": 70,
+    "seconds": 3.68,
+    "strategy": {
+      "top_speed": 1.0,
+      "acceleration": 0.9943,
+      "braking": 0.8382,
+      "brake_margin": 0.8562,
+      "corner_speed": 1.0,
+      "steering": 0.1668,
+      "lookahead": 62.2024
+    }
+  },
+  {
+    "algorithm": "Hill Climbing",
+    "seed": 6,
+    "lap_time": 6.383333333333334,
+    "wall_hits": 0,
+    "fitness": 6.383,
+    "evaluations": 600,
+    "laps_to_1pct": 96,
+    "seconds": 3.08,
+    "strategy": {
+      "top_speed": 1.0,
+      "acceleration": 1.0,
+      "braking": 1.0,
+      "brake_margin": 0.2018,
+      "corner_speed": 1.0,
+      "steering": 0.1322,
+      "lookahead": 63.8889
+    }
+  },
+  {
+    "algorithm": "Hill Climbing",
+    "seed": 7,
+    "lap_time": 6.383333333333334,
+    "wall_hits": 0,
+    "fitness": 6.383,
+    "evaluations": 600,
+    "laps_to_1pct": 25,
+    "seconds": 4.17,
+    "strategy": {
+      "top_speed": 1.0,
+      "acceleration": 0.9961,
+      "braking": 0.9945,
+      "brake_margin": 0.0,
+      "corner_speed": 1.0,
+      "steering": 0.0667,
+      "lookahead": 75.7508
+    }
+  },
+  {
+    "algorithm": "Hill Climbing",
+    "seed": 8,
+    "lap_time": 6.383333333333334,
+    "wall_hits": 0,
+    "fitness": 6.383,
+    "evaluations": 600,
+    "laps_to_1pct": 69,
+    "seconds": 2.43,
+    "strategy": {
+      "top_speed": 1.0,
+      "acceleration": 1.0,
+      "braking": 0.5048,
+      "brake_margin": 0.6241,
+      "corner_speed": 1.0,
+      "steering": 0.3,
+      "lookahead": 62.7716
+    }
+  },
+  {
+    "algorithm": "Hill Climbing",
+    "seed": 9,
+    "lap_time": 6.4,
+    "wall_hits": 0,
+    "fitness": 6.4,
+    "evaluations": 600,
+    "laps_to_1pct": 45,
+    "seconds": 2.64,
+    "strategy": {
+      "top_speed": 1.0,
+      "acceleration": 1.0,
+      "braking": 0.6934,
+      "brake_margin": 1.9429,
+      "corner_speed": 0.9919,
+      "steering": 0.2961,
+      "lookahead": 58.5308
+    }
+  },
+  {
+    "algorithm": "Hill Climbing",
+    "seed": 10,
+    "lap_time": 6.383333333333334,
+    "wall_hits": 0,
+    "fitness": 6.383,
+    "evaluations": 600,
+    "laps_to_1pct": 367,
+    "seconds": 3.74,
+    "strategy": {
+      "top_speed": 1.0,
+      "acceleration": 0.9657,
+      "braking": 0.2866,
+      "brake_margin": 0.6323,
+      "corner_speed": 1.0,
+      "steering": 0.1555,
+      "lookahead": 64.2021
+    }
+  },
+  {
+    "algorithm": "Genetic Algorithm",
+    "seed": 1,
+    "lap_time": 6.366666666666666,
+    "wall_hits": 0,
+    "fitness": 6.367,
+    "evaluations": 600,
+    "laps_to_1pct": 311,
+    "seconds": 2.08,
+    "strategy": {
+      "top_speed": 0.9987,
+      "acceleration": 1.0,
+      "braking": 0.8682,
+      "brake_margin": 1.2092,
+      "corner_speed": 0.9992,
+      "steering": 0.1748,
+      "lookahead": 64.9328
+    }
+  },
+  {
+    "algorithm": "Genetic Algorithm",
+    "seed": 2,
+    "lap_time": 6.383333333333334,
+    "wall_hits": 0,
+    "fitness": 6.383,
+    "evaluations": 600,
+    "laps_to_1pct": 319,
+    "seconds": 2.31,
+    "strategy": {
+      "top_speed": 0.9985,
+      "acceleration": 1.0,
+      "braking": 0.4754,
+      "brake_margin": 1.5248,
+      "corner_speed": 0.9901,
+      "steering": 0.2286,
+      "lookahead": 60.5497
+    }
+  },
+  {
+    "algorithm": "Genetic Algorithm",
+    "seed": 3,
+    "lap_time": 6.4,
+    "wall_hits": 0,
+    "fitness": 6.4,
+    "evaluations": 600,
+    "laps_to_1pct": 174,
+    "seconds": 2.05,
+    "strategy": {
+      "top_speed": 1.0,
+      "acceleration": 0.9541,
+      "braking": 0.9017,
+      "brake_margin": 1.5968,
+      "corner_speed": 1.0,
+      "steering": 0.2239,
+      "lookahead": 59.9265
+    }
+  },
+  {
+    "algorithm": "Genetic Algorithm",
+    "seed": 4,
+    "lap_time": 6.4,
+    "wall_hits": 0,
+    "fitness": 6.4,
+    "evaluations": 600,
+    "laps_to_1pct": 319,
+    "seconds": 2.25,
+    "strategy": {
+      "top_speed": 1.0,
+      "acceleration": 0.9958,
+      "braking": 0.5554,
+      "brake_margin": 1.3715,
+      "corner_speed": 0.9982,
+      "steering": 0.1896,
+      "lookahead": 59.7299
+    }
+  },
+  {
+    "algorithm": "Genetic Algorithm",
+    "seed": 5,
+    "lap_time": 6.383333333333334,
+    "wall_hits": 0,
+    "fitness": 6.383,
+    "evaluations": 600,
+    "laps_to_1pct": 209,
+    "seconds": 2.69,
+    "strategy": {
+      "top_speed": 1.0,
+      "acceleration": 0.9718,
+      "braking": 0.8137,
+      "brake_margin": 1.7431,
+      "corner_speed": 0.9969,
+      "steering": 0.1459,
+      "lookahead": 64.3071
+    }
+  },
+  {
+    "algorithm": "Genetic Algorithm",
+    "seed": 6,
+    "lap_time": 6.383333333333334,
+    "wall_hits": 0,
+    "fitness": 6.383,
+    "evaluations": 600,
+    "laps_to_1pct": 174,
+    "seconds": 2.14,
+    "strategy": {
+      "top_speed": 0.9962,
+      "acceleration": 1.0,
+      "braking": 0.3201,
+      "brake_margin": 0.4513,
+      "corner_speed": 1.0,
+      "steering": 0.246,
+      "lookahead": 61.0261
+    }
+  },
+  {
+    "algorithm": "Genetic Algorithm",
+    "seed": 7,
+    "lap_time": 6.383333333333334,
+    "wall_hits": 0,
+    "fitness": 6.383,
+    "evaluations": 600,
+    "laps_to_1pct": 207,
+    "seconds": 2.31,
+    "strategy": {
+      "top_speed": 0.9998,
+      "acceleration": 0.9905,
+      "braking": 0.7132,
+      "brake_margin": 0.4868,
+      "corner_speed": 1.0,
+      "steering": 0.1528,
+      "lookahead": 64.2857
+    }
+  },
+  {
+    "algorithm": "Genetic Algorithm",
+    "seed": 8,
+    "lap_time": 6.383333333333334,
+    "wall_hits": 0,
+    "fitness": 6.383,
+    "evaluations": 600,
+    "laps_to_1pct": 286,
+    "seconds": 1.83,
+    "strategy": {
+      "top_speed": 1.0,
+      "acceleration": 1.0,
+      "braking": 0.4514,
+      "brake_margin": 0.5902,
+      "corner_speed": 1.0,
+      "steering": 0.2465,
+      "lookahead": 60.5962
+    }
+  },
+  {
+    "algorithm": "Genetic Algorithm",
+    "seed": 9,
+    "lap_time": 6.383333333333334,
+    "wall_hits": 0,
+    "fitness": 6.383,
+    "evaluations": 600,
+    "laps_to_1pct": 308,
+    "seconds": 2.22,
+    "strategy": {
+      "top_speed": 0.9913,
+      "acceleration": 0.9857,
+      "braking": 0.4977,
+      "brake_margin": 1.0467,
+      "corner_speed": 1.0,
+      "steering": 0.1313,
+      "lookahead": 64.5551
+    }
+  },
+  {
+    "algorithm": "Genetic Algorithm",
+    "seed": 10,
+    "lap_time": 6.383333333333334,
+    "wall_hits": 0,
+    "fitness": 6.383,
+    "evaluations": 600,
+    "laps_to_1pct": 221,
+    "seconds": 2.11,
+    "strategy": {
+      "top_speed": 0.9981,
+      "acceleration": 1.0,
+      "braking": 0.751,
+      "brake_margin": 0.7698,
+      "corner_speed": 0.9998,
+      "steering": 0.2313,
+      "lookahead": 60.7033
+    }
+  }
+]

@@ -66,11 +66,33 @@ WALL_BOUNCE = 0.3             # fraction of speed returned (reversed) off a wall
 
 # Race
 NUM_LAPS = 3
-NUM_AI_CARS = 3               # up to 5 fit on the starting grid
+NUM_AI_CARS = 4               # up to 5 fit on the starting grid
 COUNTDOWN_SECONDS = 3
 AI_COLORS = [BLUE, YELLOW, PURPLE, ORANGE, CYAN]
-AI_SPEED_FACTORS = [0.95, 0.91, 0.87, 0.83, 0.79]  # fraction of player top speed
+AI_SPEED_FACTOR = 0.95        # all AI cars are identical, so route quality decides the race
+AI_STRATEGIES = ["astar", "ga", "bfs", "baseline"]  # how each AI opponent plans (and drives): astar, hc, ga, bfs, baseline
+
+# Search graph (ai/search.py): every waypoint station has several lanes
+SEARCH_LANE_OFFSETS = [-24, -12, 0, 12, 24]   # pixels left (-) / right (+) of the centre line
+SEARCH_LANE_CHANGE_PENALTY = 4.0              # extra cost per lane stepped (steering effort)
 
 # Effects / HUD
 SKID_SPEED = 3.8              # steering hard above this speed leaves skid marks
 HUD_SPEED_SCALE = 30          # pixels/frame -> displayed km/h
+
+# Driving style of an AI car. These numbers are the "genes" that ai/optimization.py tunes.
+AI_DEFAULT_STYLE = {
+    "top_speed": 1.0,       # fraction of the car's max speed it aims for on straights
+    "acceleration": 1.0,    # how hard the throttle is pressed when below target speed
+    "braking": 1.0,         # how hard the brake is pressed when above target speed
+    "brake_margin": 0.5,    # how far above target speed before it brakes (px/frame)
+    "corner_speed": 0.45,   # fraction of target speed kept in the sharpest corners
+    "steering": 1 / 15,     # steering response (steer per degree of heading error)
+    "lookahead": WAYPOINT_REACH_DISTANCE,  # distance at which it aims for the next waypoint
+}
+
+# Optimization (ai/optimization.py)
+OPT_EVALUATIONS = 600         # lap simulations each algorithm may run
+OPT_TIME_LIMIT = 25           # seconds before a simulated lap counts as unfinished
+OPT_WALL_PENALTY = 1.0        # seconds added to the fitness per wall hit
+OPT_DNF_PENALTY = 20.0        # seconds added when the lap is not finished

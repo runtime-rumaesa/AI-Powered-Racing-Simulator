@@ -92,6 +92,12 @@ class Track:
         lateral = (cur[0] - px) * -ty + (cur[1] - py) * tx
         return d_prev < 0 <= d_cur and abs(lateral) <= ROAD_HALF_WIDTH + 5
 
+    def respawn_pose(self, x, y):
+        """(x, y, angle) on the centre line, facing the right way, nearest to (x, y)."""
+        i = min(range(len(self.center)), key=lambda k: math.hypot(self.center[k][0] - x, self.center[k][1] - y))
+        tx, ty = self.tangents[i]
+        return self.center[i][0], self.center[i][1], math.degrees(math.atan2(ty, tx))
+
     def grid_slot(self, slot):
         """(x, y, angle) for a starting-grid slot: two cars per row behind the line."""
         row = slot // 2

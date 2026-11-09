@@ -1,6 +1,10 @@
 import math
 
+import pygame
+
 from settings import *
+from ai.optimization import load_best_style
+from ai.search import plan_lap_route, STRATEGY_LABELS
 from game import collision
 from game.car import Car, AIController
 from game.effects import Effects
@@ -10,8 +14,9 @@ from game.track import get_track, get_waypoints
 class Racer:
     """A car plus its race progress. controller=None means the human player."""
 
-    def __init__(self, name, car, controller=None):
+    def __init__(self, name, car, controller=None, strategy=None):
         self.name = name
+        self.strategy = strategy
         self.car = car
         self.controller = controller
 
@@ -56,16 +61,23 @@ class Race:
                 self.racers.append(Racer("You", Car(x=x, y=y, angle=angle)))
             else:
                 i = slot - 1
+                strategy = AI_STRATEGIES[i % len(AI_STRATEGIES)]
+                name = STRATEGY_LABELS[strategy]
+                if i >= len(AI_STRATEGIES):
+                    name += f" {i // len(AI_STRATEGIES) + 1}"
                 car = Car(
                     x=x,
                     y=y,
                     angle=angle,
                     color=AI_COLORS[i % len(AI_COLORS)],
-                    max_speed=CAR_MAX_SPEED * AI_SPEED_FACTORS[i % len(AI_SPEED_FACTORS)],
+                    max_speed=CAR_MAX_SPEED * AI_SPEED_FACTOR,
                 )
-                # Each AI drives the lane that matches its grid slot
-                lane = LANE_OFFSET if slot % 2 else -LANE_OFFSET
-                self.racers.append(Racer(f"AI {slot}", car, AIController(get_waypoints(offset=lane))))
+                # The route comes from a search algorithm (ai/search.py), the
+                # driving style from an optimizer (ai/optimization.py)
+                lateral = -LANE_OFFSET if slot % 2 == 0 else LANE_OFFSET  # grid lane
+                route = list(plan_lap_route(strategy, lateral))
+                style = load_best_style(strategy)  # None unless hc / ga
+                self.racers.append(Racer(name, car, AIController(route, style), strategy))
 
         self.player = self.racers[0]
 
@@ -93,6 +105,8 @@ class Race:
                 car.handle_input(keys)
             else:
                 racer.controller.update(car)
+                if racer.controller.needs_respawn:
+                    self.respawn(racer)
 
             racer.prev_pos = (car.x, car.y)
             last_good = car.get_state()
@@ -106,9 +120,13 @@ class Race:
 
             self._tyre_effects(car)
 
-        # Cars that already finished are ignored so they don't block the others
+        # Cars that already finished are ignored so they don't block the others.
+        # AI cars drive through each other and only bump the player: they all
+        # follow similar racing lines, so contact between them would be luck
+        # and would hide which route is really better.
         active = [r.car for r in self.racers if not r.finished]
-        for x, y, a, b in collision.resolve_car_collisions(active):
+        ai_pair = lambda a, b: a is not self.player.car and b is not self.player.car
+        for x, y, a, b in collision.resolve_car_collisions(active, ignore_pair=ai_pair):
             self.effects.add_sparks(x, y, 0.6)
             if self.player.car in (a, b):
                 self.effects.shake_camera(4)
@@ -119,6 +137,16 @@ class Race:
 
         if self.player.finished:
             self.state = "finished"
+
+    def respawn(self, racer):
+        """Put a stuck car back on the centre line, facing the right way."""
+        car = racer.car
+        x, y, angle = self.track.respawn_pose(car.x, car.y)
+        car.set_state((x, y, angle))
+        car.speed = 0.0
+        racer.prev_pos = (x, y)
+        if racer.controller is not None:
+            racer.controller.reset_stuck()
 
     def _tyre_effects(self, car):
         if not car.skidding:
@@ -173,6 +201,16 @@ class Race:
         return self.finish_order[0] if self.finish_order else None
 
     # ---------------------------------------------------------------- drawing
+    def draw_routes(self, screen):
+        """Debug view: the route each AI planned, in the colour of its car."""
+        for racer in self.racers:
+            if racer.controller is None:
+                continue
+            points = racer.controller.waypoints
+            pygame.draw.lines(screen, racer.car.color, True, points, 3)
+            for p in points:
+                pygame.draw.circle(screen, WHITE, (int(p[0]), int(p[1])), 2)
+
     def draw(self, screen):
         self.effects.draw_under(screen)
         for racer in reversed(self.racers):  # player is drawn last, on top

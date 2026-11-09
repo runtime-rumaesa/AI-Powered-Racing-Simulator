@@ -25,29 +25,51 @@ def car_on_road(car):
 
 
 def resolve_wall_collision(car, last_good_state):
-    """If the car left the road, put it back and bounce it off the wall.
+    """Keep the car on the road after it has moved this frame.
 
-    Returns True when a collision happened.
+    A move is a translation plus a rotation, and they are checked separately
+    so a car touching a wall can still slide along it or turn away from it:
+
+        1. the whole move is fine                -> nothing to do
+        2. only the turn is blocked              -> keep the movement, skip the turn
+        3. the movement is blocked, a turn isn't -> keep the turn only, bounce
+        4. both blocked                          -> undo the move, bounce
+
+    Returns True for a real hit (3 and 4), which is what damages the run.
     """
     if car_on_road(car):
         return False
-    car.set_state(last_good_state)
+
+    new_x, new_y, new_angle = car.get_state()
+    old_x, old_y, old_angle = last_good_state
+
+    car.set_state((new_x, new_y, old_angle))      # movement without the turn
+    if car_on_road(car):
+        return False
+
+    car.set_state((old_x, old_y, new_angle))      # turn without the movement
+    if not car_on_road(car):
+        car.set_state(last_good_state)
     car.speed *= -WALL_BOUNCE
     return True
 
 
 # ------------------------------------------------------------------- cars
-def resolve_car_collisions(cars):
+def resolve_car_collisions(cars, ignore_pair=None):
     """Push overlapping cars apart and slow them down.
 
     Each car is approximated by a circle, which is simple and good enough
-    for arcade racing. Returns a list of (x, y, car_a, car_b) for each bump.
+    for arcade racing. `ignore_pair(a, b)` can return True for pairs that
+    should drive through each other. Returns a list of (x, y, car_a, car_b)
+    for each bump.
     """
     bumps = []
     min_dist = 2 * CAR_COLLISION_RADIUS
     for i in range(len(cars)):
         for j in range(i + 1, len(cars)):
             a, b = cars[i], cars[j]
+            if ignore_pair and ignore_pair(a, b):
+                continue
             dx, dy = b.x - a.x, b.y - a.y
             dist = math.hypot(dx, dy)
             if dist >= min_dist:

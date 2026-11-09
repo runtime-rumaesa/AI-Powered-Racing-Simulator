@@ -14,6 +14,7 @@ def main():
 
     race = Race()
     hud = HUD(get_track())
+    show_routes = False
     world = pygame.Surface((WIDTH, HEIGHT))  # everything that can shake
 
     running = True
@@ -26,10 +27,16 @@ def main():
                     running = False
                 elif event.key == pygame.K_r:
                     race = Race()  # restart
+                elif event.key == pygame.K_t and race.state == "racing":
+                    race.respawn(race.player)  # stuck? back on the track
+                elif event.key == pygame.K_p:
+                    show_routes = not show_routes  # show the AI routes
 
         race.update(pygame.key.get_pressed())
 
         draw_track(world)
+        if show_routes:
+            race.draw_routes(world)
         race.draw(world)
 
         screen.fill(GRASS_COLOR)

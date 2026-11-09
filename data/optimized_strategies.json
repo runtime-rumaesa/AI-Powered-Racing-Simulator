@@ -1,0 +1,46 @@
+{
+  "baseline": {
+    "style": {
+      "top_speed": 1.0,
+      "acceleration": 1.0,
+      "braking": 1.0,
+      "brake_margin": 0.5,
+      "corner_speed": 0.45,
+      "steering": 0.06666666666666667,
+      "lookahead": 55
+    },
+    "lap_time": 7.95,
+    "wall_hits": 0,
+    "fitness": 7.95
+  },
+  "hill_climbing": {
+    "style": {
+      "top_speed": 1.0,
+      "acceleration": 1.0,
+      "braking": 0.5162,
+      "brake_margin": 1.4536,
+      "corner_speed": 1.0,
+      "steering": 0.235,
+      "lookahead": 61.046
+    },
+    "seed": 1,
+    "lap_time": 6.383333333333334,
+    "wall_hits": 0,
+    "fitness": 6.383333333333334
+  },
+  "genetic": {
+    "style": {
+      "top_speed": 0.9987,
+      "acceleration": 1.0,
+      "braking": 0.8682,
+      "brake_margin": 1.2092,
+      "corner_speed": 0.9992,
+      "steering": 0.1748,
+      "lookahead": 64.9328
+    },
+    "seed": 1,
+    "lap_time": 6.366666666666666,
+    "wall_hits": 0,
+    "fitness": 6.366666666666666
+  }
+}

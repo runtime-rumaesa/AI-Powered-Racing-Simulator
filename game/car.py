@@ -32,6 +32,7 @@ class Car:
         acceleration=CAR_ACCELERATION,
         max_speed=CAR_MAX_SPEED,
         turn_speed=CAR_TURN_SPEED,
+        sprites=True,
     ):
         self.x = x
         self.y = y
@@ -50,7 +51,11 @@ class Car:
         self.fuel = FUEL_MAX
 
         self.color = color
-        self._base_image, self._shadow_image = self._make_images(color)
+        # sprites=False skips the artwork: used by the headless lap simulator
+        if sprites:
+            self._base_image, self._shadow_image = self._make_images(color)
+        else:
+            self._base_image = self._shadow_image = None
 
     # ------------------------------------------------------------------ setup
     @staticmethod
@@ -175,7 +180,7 @@ class Car:
             self.speed += self.acceleration * throttle
         elif throttle < 0:
             if self.speed > 0:
-                self.speed -= self.brake_power      # braking
+                self.speed -= self.brake_power * min(1.0, abs(throttle))  # braking
             else:
                 self.speed += self.acceleration * throttle  # reversing
         else:
@@ -225,15 +230,21 @@ class Car:
 class AIController:
     """Drives a Car along a list of waypoints.
 
-    It only decides throttle and steer; the Car does the moving. In Phase 3
-    the waypoint list will come from BFS / A* instead of being fixed.
+    It only decides throttle and steer; the Car does the moving. The route
+    comes from a search algorithm (ai/search.py) and the driving `style`
+    can be tuned by an optimizer (ai/optimization.py).
     """
 
-    def __init__(self, waypoints):
+    def __init__(self, waypoints, style=None):
         self.waypoints = waypoints
+        self.style = dict(AI_DEFAULT_STYLE)
+        if style:
+            self.style.update(style)
         self.target = 0  # index of the waypoint we are driving toward
         self.stuck = 0
         self.reverse_frames = 0
+        self.idle = 0              # frames in a row with (almost) no movement
+        self.needs_respawn = False # set when it is hopelessly stuck; the Race handles it
 
         # How sharp is the road just ahead of each waypoint? (0 straight .. 1 sharp)
         n = len(waypoints)
@@ -250,12 +261,19 @@ class AIController:
                 worst = max(worst, diff)
             self.severity.append(min(1.0, worst / 80.0))
 
+    def reset_stuck(self):
+        self.idle = 0
+        self.stuck = 0
+        self.reverse_frames = 0
+        self.needs_respawn = False
+
     def update(self, car):
+        style = self.style
         tx, ty = self.waypoints[self.target]
         dx, dy = tx - car.x, ty - car.y
 
         # Close enough: aim for the next waypoint
-        if math.hypot(dx, dy) < WAYPOINT_REACH_DISTANCE:
+        if math.hypot(dx, dy) < style["lookahead"]:
             self.target = (self.target + 1) % len(self.waypoints)
             tx, ty = self.waypoints[self.target]
             dx, dy = tx - car.x, ty - car.y
@@ -263,7 +281,12 @@ class AIController:
         # Smallest signed angle from where we face to where we want to go
         desired = math.degrees(math.atan2(dy, dx))
         diff = (desired - car.angle + 180) % 360 - 180
-        steer = max(-1.0, min(1.0, diff / 15.0))
+        steer = max(-1.0, min(1.0, diff * style["steering"]))
+
+        # Not moving for 2 seconds: ask to be put back on the track
+        self.idle = self.idle + 1 if abs(car.speed) < 0.5 else 0
+        if self.idle > 2 * FPS:
+            self.needs_respawn = True
 
         # Wedged against a wall? Back up for a moment.
         if self.reverse_frames > 0:
@@ -278,11 +301,12 @@ class AIController:
         # Slow down for sharp corners ahead and for big steering errors
         turn = min(abs(diff), 60) / 60
         corner = self.severity[self.target]
-        target_speed = car.max_speed * (1 - 0.55 * max(turn, corner))
+        slowdown = 1 - style["corner_speed"]
+        target_speed = car.max_speed * style["top_speed"] * (1 - slowdown * max(turn, corner))
         car.steer = steer
         if car.speed < target_speed:
-            car.throttle = 1.0
-        elif car.speed > target_speed + 0.5:
-            car.throttle = -1.0
+            car.throttle = style["acceleration"]
+        elif car.speed > target_speed + style["brake_margin"]:
+            car.throttle = -style["braking"]
         else:
             car.throttle = 0.0
