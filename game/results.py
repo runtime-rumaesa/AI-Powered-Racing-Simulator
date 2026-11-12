@@ -6,6 +6,8 @@ It has two views, switched with TAB (or the left / right arrows):
                 and how often the car had to be put back on the track
     Lap times   every lap of every car; the fastest in each lap is green and the
                 fastest lap of the race is purple
+    Charts      bar charts of the finish times and the best laps, and a line chart
+                of the lap time in every lap (pygame drawing, no plotting library)
 
 handle_event() returns what the player chose and main.py acts on it:
 
@@ -13,9 +15,10 @@ handle_event() returns what the player chose and main.py acts on it:
     "menu"    back to the main menu
     None      nothing (switching the view is handled here)
 
-The views are listed in PAGES, so a new one (for example the performance
-charts) only needs a name there and a method for it.
+The views are listed in PAGES, so a new one only needs a name there and a method for it.
 """
+
+import math
 
 import pygame
 
@@ -34,7 +37,11 @@ ROW_A = (24, 30, 48)
 ROW_B = (30, 37, 58)
 ROW_YOU = (66, 58, 24)
 
-PAGES = ("Standings", "Lap times")
+GRID = (52, 60, 84)
+AXIS = (120, 128, 150)
+CARD = (22, 28, 46)
+
+PAGES = ("Standings", "Lap times", "Charts")
 
 
 def lap_text(seconds):
@@ -161,8 +168,10 @@ class ResultsScreen:
 
         if self.page == 0:
             self._draw_standings(screen, left, right)
-        else:
+        elif self.page == 1:
             self._draw_lap_times(screen, left, right)
+        else:
+            self._draw_charts(screen, left, right)
 
         if any(not r.finished for r in self.rows):
             self._text(screen, self.f_tiny, f"DNF: did not finish within {FINISH_GRACE_SECONDS:.0f} seconds of the player.",
@@ -261,3 +270,150 @@ class ResultsScreen:
 
         self._text(screen, self.f_tiny, "green = fastest car in that lap      purple = fastest lap of the race",
                    (left, self.ROW_TOP + len(self.rows) * self.ROW_STEP + 8), DIM, "topleft", False)
+
+    # --------------------------------------------------------------- charts
+    @staticmethod
+    def _nice_axis(lo, hi, ticks=4):
+        """Round the range to 'nice' numbers: returns (axis_lo, axis_hi, step)."""
+        span = max(hi - lo, 1e-6)
+        raw = span / ticks
+        magnitude = 10 ** math.floor(math.log10(raw))
+        step = next(m * magnitude for m in (1, 2, 2.5, 5, 10) if raw <= m * magnitude + 1e-12)
+        return math.floor(lo / step + 1e-9) * step, math.ceil(hi / step - 1e-9) * step, step
+
+    @staticmethod
+    def _tick_text(value, step):
+        return f"{value:.0f}" if step >= 1 else f"{value:.1f}" if step >= 0.1 else f"{value:.2f}"
+
+    def _fit(self, text, width):
+        """Shorten text with '..' until it fits in `width` pixels."""
+        while len(text) > 3 and self.f_tiny.size(text)[0] > width:
+            text = text[:-3] + ".."
+        return text
+
+    def _card(self, screen, rect, title, note=None):
+        pygame.draw.rect(screen, CARD, rect, border_radius=14)
+        self._text(screen, self.f_small, title, (rect.x + 14, rect.y + 10), WHITE, "topleft", False)
+        if note:
+            self._text(screen, self.f_tiny, note, (rect.right - 14, rect.y + 12), DIM, "topright", False)
+
+    def _draw_charts(self, screen, left, right):
+        top = self.PANEL_RECT.y + 186
+        bottom = self.PANEL_RECT.bottom - 70
+        gap = 14
+        column = (right - left - gap) // 2
+        half = (bottom - top - gap) // 2
+
+        # Finish times: finished cars in the order they finished, DNFs at the end
+        finish = [(r, r.finish_time if r.finished else None) for r in self.rows]
+        self._draw_bars(screen, pygame.Rect(left, top, column, half), "Finish time (s)", finish,
+                        lambda v: f"{v:.1f}s", GOLD)
+
+        # Best laps: fastest first
+        best = sorted(((r, r.best_lap) for r in self.rows), key=lambda item: (item[1] is None, item[1] or 0))
+        self._draw_bars(screen, pygame.Rect(left, top + half + gap, column, half), "Best lap (s)", best,
+                        lambda v: f"{v:.2f}s", FASTEST)
+
+        self._draw_line_chart(screen, pygame.Rect(left + column + gap, top, column, bottom - top))
+
+    def _draw_bars(self, screen, rect, title, items, fmt, highlight):
+        """Horizontal bars, one per car. items: [(racer, value or None)]; the lowest value wins."""
+        values = [v for _, v in items if v is not None]
+        if values:
+            lo_v, hi_v = min(values), max(values)
+            span = hi_v - lo_v
+            # Times are close together, so the axis does not start at 0 - it says where it starts
+            raw_lo = max(0.0, lo_v - span * 1.2) if span > 1e-6 else 0.0
+            axis_lo, axis_hi, step = self._nice_axis(raw_lo, hi_v + span * 0.08 + 1e-6)
+        else:
+            axis_lo, axis_hi, step = 0.0, 1.0, 0.25
+        self._card(screen, rect, title, f"axis starts at {self._tick_text(axis_lo, step)}s" if axis_lo > 0 else None)
+
+        label_w = 96
+        plot_l, plot_r = rect.x + 14 + label_w, rect.right - 64
+        plot_t, plot_b = rect.y + 34, rect.bottom - 22
+        scale = (plot_r - plot_l) / (axis_hi - axis_lo)
+
+        # Gridlines and tick labels
+        v = axis_lo
+        while v <= axis_hi + 1e-9:
+            x = int(plot_l + (v - axis_lo) * scale)
+            pygame.draw.line(screen, GRID, (x, plot_t - 2), (x, plot_b), 1)
+            self._text(screen, self.f_tiny, self._tick_text(v, step), (x, plot_b + 4), DIM, "midtop", False)
+            v += step
+        pygame.draw.line(screen, AXIS, (plot_l, plot_t - 2), (plot_l, plot_b), 1)
+
+        row = (plot_b - plot_t) / max(1, len(items))
+        bar_h = max(6, min(18, int(row) - 6))
+        best_value = min(values) if values else None
+        for i, (racer, value) in enumerate(items):
+            cy = int(plot_t + row * (i + 0.5))
+            self._text(screen, self.f_tiny, self._fit(racer.name, label_w - 6), (plot_l - 8, cy),
+                       YELLOW if racer.is_player else WHITE, "midright", False)
+            if value is None:
+                self._text(screen, self.f_tiny, "DNF" if not racer.finished else "--", (plot_l + 8, cy),
+                           RED if not racer.finished else DIM, "midleft", False)
+                continue
+            bar = pygame.Rect(plot_l, cy - bar_h // 2, max(3, int((value - axis_lo) * scale)), bar_h)
+            pygame.draw.rect(screen, racer.car.color, bar, border_radius=4)
+            is_best = value == best_value
+            if is_best:
+                pygame.draw.rect(screen, highlight, bar, 2, border_radius=4)
+            self._text(screen, self.f_tiny, fmt(value), (bar.right + 6, cy), highlight if is_best else WHITE, "midleft", False)
+
+    def _draw_line_chart(self, screen, rect):
+        """Lap time of every car in every lap. A lap far slower than the rest (a car that was stuck)
+        is drawn at the top edge with a triangle instead of squashing the other lines."""
+        self._card(screen, rect, "Lap time per lap (s)")
+        series = [(r, r.lap_times) for r in self.rows if r.lap_times]
+        times = sorted(t for _, ts in series for t in ts)
+        if not times:
+            self._text(screen, self.f_small, "no laps were completed", rect.center, DIM, "center", False)
+            return
+        median = times[len(times) // 2]
+        cap = min(times[-1], median * 1.5)
+        axis_lo, axis_hi, step = self._nice_axis(times[0] - (cap - times[0]) * 0.1, cap + (cap - times[0]) * 0.05 + 1e-6)
+
+        legend_rows = (len(self.rows) + 1) // 2
+        plot_l, plot_r = rect.x + 52, rect.right - 20
+        plot_t, plot_b = rect.y + 40, rect.bottom - 40 - legend_rows * 20
+        laps = self.race.total_laps
+
+        def px(lap):                                    # lap number 1..laps -> x
+            return plot_l + (plot_r - plot_l) * ((lap - 1) / (laps - 1) if laps > 1 else 0.5)
+
+        def py(t):
+            return plot_b - (min(t, axis_hi) - axis_lo) / (axis_hi - axis_lo) * (plot_b - plot_t)
+
+        v = axis_lo
+        while v <= axis_hi + 1e-9:
+            y = int(py(v))
+            pygame.draw.line(screen, GRID, (plot_l, y), (plot_r, y), 1)
+            self._text(screen, self.f_tiny, self._tick_text(v, step), (plot_l - 8, y), DIM, "midright", False)
+            v += step
+        for lap in range(1, laps + 1):
+            self._text(screen, self.f_tiny, str(lap), (px(lap), plot_b + 6), DIM, "midtop", False)
+        self._text(screen, self.f_tiny, "lap", (plot_r, plot_b + 22), DIM, "topright", False)
+        pygame.draw.line(screen, AXIS, (plot_l, plot_b), (plot_r, plot_b), 1)
+        pygame.draw.line(screen, AXIS, (plot_l, plot_t), (plot_l, plot_b), 1)
+
+        for racer, ts in reversed(series):              # the player is drawn last, on top
+            points = [(px(i + 1), py(t)) for i, t in enumerate(ts)]
+            width = 4 if racer.is_player else 2
+            if len(points) > 1:
+                pygame.draw.lines(screen, racer.car.color, False, points, width)
+            for (x, y), t in zip(points, ts):
+                if t > axis_hi:                         # off the chart
+                    pygame.draw.polygon(screen, racer.car.color, [(x - 5, y + 8), (x + 5, y + 8), (x, y - 2)])
+                else:
+                    pygame.draw.circle(screen, CARD, (int(x), int(y)), 6 if racer.is_player else 5)
+                    pygame.draw.circle(screen, racer.car.color, (int(x), int(y)), 4 if racer.is_player else 3)
+
+        # Legend: two columns under the plot
+        half = (rect.width - 28) // 2
+        for i, racer in enumerate(self.rows):
+            x = rect.x + 16 + (i % 2) * half
+            y = rect.bottom - 14 - legend_rows * 20 + (i // 2) * 20 + 10
+            pygame.draw.circle(screen, racer.car.color, (x + 5, y), 5)
+            self._text(screen, self.f_tiny, self._fit(racer.name, half - 26), (x + 16, y),
+                       YELLOW if racer.is_player else WHITE, "midleft", False)
