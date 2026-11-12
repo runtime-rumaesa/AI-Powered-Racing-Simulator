@@ -1,5 +1,6 @@
 import pygame
 from settings import *
+from game.conditions import tyre_life
 
 PANEL = (12, 16, 28, 180)
 DIM = (150, 158, 175)
@@ -9,6 +10,13 @@ SEGMENT_OFF = (44, 48, 62)
 def format_time(seconds):
     minutes = int(seconds // 60)
     return f"{minutes:02d}:{seconds - minutes * 60:05.2f}"
+
+
+def ordinal(n):
+    """1 -> 1st, 2 -> 2nd, 11 -> 11th ..."""
+    if 10 <= n % 100 <= 20:
+        return f"{n}th"
+    return f"{n}{ {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th') }"
 
 
 class HUD:
@@ -83,6 +91,10 @@ class HUD:
             pygame.draw.circle(screen, WHITE, (x + 18, row_y), 7)
             pygame.draw.circle(screen, racer.car.color, (x + 18, row_y), 6)
             self._text(screen, self.f_small, racer.name, (x + 34, row_y), WHITE, "midleft", False)
+            life = tyre_life(racer.tyre_wear)
+            color = GREEN if life > 50 else ORANGE if life > 25 else RED
+            pygame.draw.circle(screen, color, (x + 128, row_y), 5, 2)          # a little tyre
+            self._text(screen, self.f_small, f"{life:.0f}", (x + self.MAP_SIZE[0] - 10, row_y), color, "midright", False)
 
     # ------------------------------------------------------------------- main
     def draw(self, screen, race):
@@ -104,27 +116,29 @@ class HUD:
         best = format_time(player.best_lap) if player.best_lap is not None else "--:--.--"
         self._text(screen, self.f_small, f"BEST {best}", (cx, 56), DIM, "center", False)
 
-        # Speedometer and fuel (infield)
-        self._draw_speed(screen, car, cx)
-        self._draw_fuel(screen, car, cx)
+        # Speedometer and fuel (infield); once you are over the line, a finish note takes their place
+        if race.state == "racing" or race.state == "countdown":
+            self._draw_speed(screen, car, cx)
+            self._draw_fuel(screen, car, cx)
+            self._draw_tyres(screen, player, cx)
+        else:
+            self._draw_finish_note(screen, race, cx)
 
         self._draw_legend(screen, race)
         self._draw_minimap(screen, race)
-        self._text(screen, self.f_small, "ARROWS drive    T respawn    P AI routes    R restart    ESC quit", (20, HEIGHT - 22), (230, 230, 230), "midleft")
+        self._text(screen, self.f_small, "ARROWS drive    T respawn    P AI routes    R restart    ESC menu", (20, HEIGHT - 22), (230, 230, 230), "midleft")
 
         if race.state == "countdown":
             self._text(screen, self.f_huge, str(int(race.countdown) + 1), (cx, HEIGHT // 2), YELLOW)
         elif race.state == "racing" and race.race_time < 0.8:
             self._text(screen, self.f_huge, "GO!", (cx, HEIGHT // 2), GREEN)
-        elif race.state == "finished":
-            self._draw_results(screen, race)
 
     def _draw_speed(self, screen, car, cx):
-        rect = (cx - 100, 225, 200, 100)
+        rect = (cx - 100, 210, 200, 100)
         self._panel(screen, rect)
         kmh = abs(car.speed) * HUD_SPEED_SCALE
-        self._text(screen, self.f_big, f"{kmh:.0f}", (cx - 8, 255), WHITE, "midright")
-        self._text(screen, self.f_small, "km/h", (cx - 2, 262), DIM, "midleft", False)
+        self._text(screen, self.f_big, f"{kmh:.0f}", (cx - 8, rect[1] + 30), WHITE, "midright")
+        self._text(screen, self.f_small, "km/h", (cx - 2, rect[1] + 37), DIM, "midleft", False)
 
         segments = 18
         lit = round(segments * min(1.0, abs(car.speed) / CAR_MAX_SPEED))
@@ -140,7 +154,7 @@ class HUD:
             pygame.draw.rect(screen, color, (rect[0] + 12 + i * 10, rect[1] + 66, 8, 20), border_radius=2)
 
     def _draw_fuel(self, screen, car, cx):
-        rect = (cx - 100, 335, 200, 46)
+        rect = (cx - 100, 320, 200, 46)
         self._panel(screen, rect)
         fraction = car.fuel / FUEL_MAX
         color = GREEN if fraction > 0.3 else ORANGE if fraction > 0.15 else RED
@@ -151,28 +165,27 @@ class HUD:
         if fraction > 0:
             pygame.draw.rect(screen, color, (bar.x, bar.y, int(bar.w * fraction), bar.h), border_radius=5)
 
-    def _draw_results(self, screen, race):
-        rows = race.standings()
-        height = 140 + 30 * len(rows)
+    def _draw_tyres(self, screen, racer, cx):
+        """Tyre life (100% = new) and the grip it gives, with the weather and the worn tyres counted in."""
+        rect = (cx - 100, 374, 200, 46)
+        self._panel(screen, rect)
+        life = tyre_life(racer.tyre_wear)
+        color = GREEN if life > 50 else ORANGE if life > 25 else RED
+        grip_color = GREEN if racer.grip > 0.8 else ORANGE if racer.grip > 0.6 else RED
+        self._text(screen, self.f_small, "TYRES", (rect[0] + 14, rect[1] + 8), DIM, "topleft", False)
+        self._text(screen, self.f_small, f"GRIP {racer.grip * 100:.0f}%", (rect[0] + 100, rect[1] + 8), grip_color, "midtop", False)
+        self._text(screen, self.f_small, f"{life:.0f}%", (rect[0] + 186, rect[1] + 8), DIM, "topright", False)
+        bar = pygame.Rect(rect[0] + 14, rect[1] + 28, 172, 10)
+        pygame.draw.rect(screen, SEGMENT_OFF, bar, border_radius=5)
+        if life > 0:
+            pygame.draw.rect(screen, color, (bar.x, bar.y, int(bar.w * life / 100), bar.h), border_radius=5)
 
-        panel = pygame.Surface((460, height), pygame.SRCALPHA)
-        pygame.draw.rect(panel, (8, 10, 20, 225), panel.get_rect(), border_radius=16)
-        pygame.draw.rect(panel, (255, 255, 255, 70), panel.get_rect(), 2, border_radius=16)
-        rect = panel.get_rect(center=(WIDTH // 2, HEIGHT // 2))
-        screen.blit(panel, rect)
-
-        y = rect.top + 34
-        self._text(screen, self.f_mid, "RACE FINISHED", (rect.centerx, y), YELLOW)
-        y += 30
-        self._text(screen, self.f_small, f"Winner: {race.winner.name}", (rect.centerx, y), WHITE, "center", False)
-        y += 34
-
-        for place, racer in enumerate(rows, start=1):
-            color = YELLOW if racer.is_player else WHITE
-            time_text = format_time(racer.finish_time) if racer.finished else "DNF"
-            pygame.draw.circle(screen, racer.car.color, (rect.left + 42, y + 9), 7)
-            self._text(screen, self.f_small, f"{place}.  {racer.name}", (rect.left + 62, y), color, "topleft", False)
-            self._text(screen, self.f_small, time_text, (rect.right - 40, y), color, "topright", False)
-            y += 30
-
-        self._text(screen, self.f_small, "Press R to race again", (rect.centerx, rect.bottom - 24), DIM, "center", False)
+    def _draw_finish_note(self, screen, race, cx):
+        """Shown while the other cars are still racing after the player crossed the line."""
+        rect = (cx - 100, 225, 200, 156)
+        self._panel(screen, rect)
+        place = race.player.finish_place
+        self._text(screen, self.f_mid, "FINISHED", (cx, rect[1] + 26), YELLOW)
+        self._text(screen, self.f_big, ordinal(place) if place else "", (cx, rect[1] + 70), WHITE)
+        self._text(screen, self.f_small, "waiting for the others", (cx, rect[1] + 108), DIM, "center", False)
+        self._text(screen, self.f_small, "SPACE  see results", (cx, rect[1] + 132), WHITE, "center", False)
