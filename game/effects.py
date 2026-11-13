@@ -1,75 +1,82 @@
-import math
+import pygame
 import random
 
-import pygame
-from settings import *
+class SkidMark:
+    def __init__(self, position):
+        self.position = pygame.math.Vector2(position)
+        self.alpha = 150  # Initial opacity
+        self.lifetime = 180  # Frames before disappearing
+
+    def update(self):
+        self.alpha -= 1
+        self.lifetime -= 1
+
+    def draw(self, surface):
+        if self.lifetime > 0 and self.alpha > 0:
+            mark_surf = pygame.Surface((4, 4), pygame.SRCALPHA)
+            mark_surf.fill((40, 40, 40, max(0, self.alpha)))
+            surface.blit(mark_surf, self.position)
 
 
-class Effects:
-    """Skid marks, tyre smoke, crash sparks and camera shake."""
+class Particle:
+    def __init__(self, x, y, color):
+        self.position = pygame.math.Vector2(x, y)
+        self.velocity = pygame.math.Vector2(random.uniform(-1, 1), random.uniform(-1, 1))
+        self.color = color
+        self.radius = random.randint(2, 4)
+        self.lifetime = 20
 
+    def update(self):
+        self.position += self.velocity
+        self.radius = max(0, self.radius - 0.1)
+        self.lifetime -= 1
+
+    def draw(self, surface):
+        if self.lifetime > 0 and self.radius > 0:
+            pygame.draw.circle(surface, self.color, (int(self.position.x), int(self.position.y)), int(self.radius))
+
+
+class EffectsManager:
     def __init__(self):
-        self.skids = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-        self.smoke = []   # [x, y, vx, vy, age, life, size]
-        self.sparks = []  # [x, y, vx, vy, life]
-        self.shake = 0.0
+        self.skid_marks = []
+        self.particles = []
+        self.shake_intensity = 0
 
-    # ---------------------------------------------------------------- adding
-    def add_skid(self, x, y):
-        pygame.draw.circle(self.skids, (12, 12, 12, 46), (int(x), int(y)), 2)
+    def add_skid_mark(self, position):
+        self.skid_marks.append(SkidMark(position))
 
     def add_smoke(self, x, y):
-        if len(self.smoke) < 160:
-            self.smoke.append([x, y, random.uniform(-0.3, 0.3), random.uniform(-0.3, 0.3),
-                               0, random.randint(22, 38), random.uniform(3, 5)])
+        self.particles.append(Particle(x, y, (200, 200, 200)))
 
-    def add_sparks(self, x, y, strength=1.0):
-        for _ in range(int(6 + 8 * strength)):
-            angle = random.uniform(0, math.tau)
-            speed = random.uniform(1.5, 4.5) * (0.6 + strength * 0.5)
-            self.sparks.append([x, y, math.cos(angle) * speed, math.sin(angle) * speed,
-                                random.randint(10, 22)])
-
-    def shake_camera(self, amount):
-        self.shake = max(self.shake, amount)
+    def trigger_shake(self, intensity=5):
+        self.shake_intensity = intensity
 
     def shake_offset(self):
-        if self.shake < 0.3:
-            return 0, 0
-        return (random.uniform(-self.shake, self.shake), random.uniform(-self.shake, self.shake))
+        if self.shake_intensity > 0:
+            offset_x = random.randint(-self.shake_intensity, self.shake_intensity)
+            offset_y = random.randint(-self.shake_intensity, self.shake_intensity)
+            return (offset_x, offset_y)
+        return (0, 0)
 
-    # ---------------------------------------------------------------- update
     def update(self):
-        self.shake *= 0.86
+        # Update skid marks
+        for mark in self.skid_marks[:]:
+            mark.update()
+            if mark.lifetime <= 0:
+                self.skid_marks.remove(mark)
 
-        for p in self.smoke:
-            p[0] += p[2]
-            p[1] += p[3]
-            p[4] += 1
-            p[6] += 0.18
-        self.smoke = [p for p in self.smoke if p[4] < p[5]]
+        # Update particles
+        for p in self.particles[:]:
+            p.update()
+            if p.lifetime <= 0:
+                self.particles.remove(p)
 
-        for p in self.sparks:
-            p[0] += p[2]
-            p[1] += p[3]
-            p[2] *= 0.92
-            p[3] *= 0.92
-            p[4] -= 1
-        self.sparks = [p for p in self.sparks if p[4] > 0]
+        # Decay screen shake
+        if self.shake_intensity > 0:
+            self.shake_intensity -= 1
 
-    # ---------------------------------------------------------------- drawing
-    def draw_under(self, screen):
-        """Skid marks and smoke: drawn below the cars."""
-        screen.blit(self.skids, (0, 0))
-        for x, y, _, _, age, life, size in self.smoke:
-            alpha = int(110 * (1 - age / life))
-            r = int(size)
-            puff = pygame.Surface((r * 2, r * 2), pygame.SRCALPHA)
-            pygame.draw.circle(puff, (235, 235, 235, alpha), (r, r), r)
-            screen.blit(puff, (x - r, y - r))
-
-    def draw_over(self, screen):
-        """Sparks: drawn above the cars."""
-        for x, y, vx, vy, life in self.sparks:
-            color = (255, 235, 120) if life > 10 else (255, 140, 40)
-            pygame.draw.line(screen, color, (x, y), (x - vx * 1.6, y - vy * 1.6), 2)
+    def draw(self, surface):
+        for mark in self.skid_marks:
+            mark.draw(surface)
+        for p in self.particles:
+            p.draw(surface)
